@@ -41,6 +41,7 @@ int main(int argc, char *argv[]) {
 			cv::MatND histCurvature = GraphUtil::computeEdgeCurvatureHistogram(patch, 10);
 
 			int c = histLength.depth();
+			printf("%d\n", c);
 
 			float hoge = compareHist(histLength, histCurvature, 1);
 
@@ -55,8 +56,9 @@ int main(int argc, char *argv[]) {
 	cv::Mat_<uchar> result = km.getSegmentation();
 
 	// Display
+	cv::flip(result, result, 1);
 	cv::namedWindow("segmentation", CV_WINDOW_AUTOSIZE|CV_WINDOW_FREERATIO);
-	cv::imshow("segmentation", result);
+	cv::imshow("segmentation", result * 64);
 
 	cv::waitKey(0);
 }

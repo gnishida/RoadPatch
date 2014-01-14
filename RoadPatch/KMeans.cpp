@@ -1,21 +1,21 @@
 #include "KMeans.h"
 
 KMeans::KMeans() {
-	cv::MatND meanLength = cv::MatND::zeros(1, 10, CV_64FC1);
-	cv::MatND meanCurvature = cv::MatND::zeros(1, 10, CV_64FC1);
+	cv::MatND meanLength = cv::MatND::zeros(10, 1, CV_32F);
+	cv::MatND meanCurvature = cv::MatND::zeros(10, 1, CV_32F);
 
 	// Dense & Grid
-	meanLength.at<double>(0, 0) = 1.0f;
-	meanCurvature.at<double>(0, 0) = 1.0f;
+	meanLength.at<float>(0, 0) = 1.0f;
+	meanCurvature.at<float>(0, 0) = 1.0f;
 
 	meanLengths.push_back(meanLength.clone());
 	meanCurvatures.push_back(meanCurvature.clone());
 
 	// Sparse & Grid
-	meanLength = cv::MatND::zeros(1, 10, CV_64FC1);
-	meanCurvature = cv::MatND::zeros(1, 10, CV_64FC1);
-	meanLength.at<double>(0, 4) = 1.0f;
-	meanCurvature.at<double>(0, 0) = 1.0f;
+	meanLength = cv::MatND::zeros(10, 1, CV_32F);
+	meanCurvature = cv::MatND::zeros(10, 1, CV_32F);
+	meanLength.at<float>(2, 0) = 1.0f;
+	meanCurvature.at<float>(0, 0) = 1.0f;
 
 	meanLengths.push_back(meanLength.clone());
 	meanCurvatures.push_back(meanCurvature.clone());
@@ -64,8 +64,8 @@ void KMeans::cluster() {
 
 		// clear the means
 		for (int i = 0; i < meanLengths.size(); i++) {
-			meanLengths[i] = cv::MatND(meanLengths[i].rows, meanLengths[i].cols, CV_32F);
-			meanCurvatures[i] = cv::MatND(meanCurvatures[i].rows, meanCurvatures[i].cols, CV_32F);
+			meanLengths[i] = cv::Scalar::all(0);
+			meanCurvatures[i] = cv::Scalar::all(0);
 		}
 
 		// update the means
