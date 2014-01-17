@@ -36,15 +36,15 @@ protected:
 public:
 	// Vertex related functions
 	static int getNumVertices(RoadGraph& roads, bool onlyValidVertex = true);
-	static int getNumConnectedVertices(RoadGraph* roads, RoadVertexDesc start, bool onlyValidVertex = true);
-	static RoadVertexDesc getVertex(RoadGraph* roads, int index, bool onlyValidVertex = true);
+	static int getNumConnectedVertices(RoadGraph& roads, RoadVertexDesc start, bool onlyValidVertex = true);
+	static RoadVertexDesc getVertex(RoadGraph& roads, int index, bool onlyValidVertex = true);
 	static RoadVertexDesc getVertex(RoadGraph& roads, const QVector2D& pt, bool onlyValidVertex = true);
 	static RoadVertexDesc getVertex(RoadGraph& roads, const QVector2D& pt, float angle, float angle_threshold, bool onlyValidVertex = true);
 	static bool getVertex(RoadGraph& roads, const QVector2D& pos, float threshold, RoadVertexDesc& desc, bool onlyValidVertex = true);
 	static bool getVertex(RoadGraph& roads, RoadVertexDesc v, float threshold, RoadVertexDesc& desc, bool onlyValidVertex = true);
 	static bool getVertex(RoadGraph& roads, const QVector2D& pos, float threshold, RoadVertexDesc ignore, RoadVertexDesc& desc, bool onlyValidVertex = true);
 	static int getVertexIndex(RoadGraph* roads, RoadVertexDesc desc, bool onlyValidVertex = true);
-	static RoadVertexDesc addVertex(RoadGraph* roads, RoadVertexPtr v);
+	static RoadVertexDesc addVertex(RoadGraph& roads, RoadVertexPtr v);
 	static void moveVertex(RoadGraph& roads, RoadVertexDesc v, const QVector2D& pt);
 	static int getDegree(RoadGraph& roads, RoadVertexDesc v, bool onlyValidEdge = true);
 	static std::vector<RoadVertexDesc> getVertices(RoadGraph* roads, bool onlyValidVertex = true);
@@ -53,18 +53,16 @@ public:
 	static RoadVertexDesc getCentralVertex(RoadGraph& roads);
 
 	// Edge related functions
-	static RoadEdgeDesc getEdge(RoadGraph* roads, int index, bool onlyValidEdge = true);
-	static float getTotalEdgeLength(RoadGraph* roads, RoadVertexDesc v);
-	//static void collapseEdge(RoadGraph* roads, RoadEdgeDesc e);
+	static RoadEdgeDesc getEdge(RoadGraph& roads, int index, bool onlyValidEdge = true);
+	static float getTotalEdgeLength(RoadGraph& roads, RoadVertexDesc v);
 	static int getNumEdges(RoadGraph& roads, bool onlyValidEdge = true);
-	static RoadEdgeDesc addEdge(RoadGraph* roads, RoadVertexDesc src, RoadVertexDesc tgt, unsigned int type, unsigned int lanes, bool oneWay = false);
-	static RoadEdgeDesc addEdge(RoadGraph* roads, RoadVertexDesc src, RoadVertexDesc tgt, RoadEdgePtr ref_edge);
+	static RoadEdgeDesc addEdge(RoadGraph& roads, RoadVertexDesc src, RoadVertexDesc tgt, unsigned int type, unsigned int lanes, bool oneWay = false);
+	static RoadEdgeDesc addEdge(RoadGraph& roads, RoadVertexDesc src, RoadVertexDesc tgt, RoadEdgePtr ref_edge);
 	static bool hasEdge(RoadGraph& roads, RoadVertexDesc desc1, RoadVertexDesc desc2, bool onlyValidEdge = true);
 	static RoadEdgeDesc getEdge(RoadGraph& roads, RoadVertexDesc src, RoadVertexDesc tgt, bool onlyValidEdge = true);
 	static std::vector<QVector2D> getOrderedPolyLine(RoadGraph* roads, RoadEdgeDesc e);
-	static void orderPolyLine(RoadGraph* roads, RoadEdgeDesc e, RoadVertexDesc src);
+	static void orderPolyLine(RoadGraph& roads, RoadEdgeDesc e, RoadVertexDesc src);
 	static void moveEdge(RoadGraph& roads, RoadEdgeDesc e, QVector2D& src_pos, QVector2D& tgt_pos);
-	static std::vector<RoadEdgeDesc> getMajorEdges(RoadGraph* roads, int num);
 	static bool removeDeadEnd(RoadGraph& roads);
 	static std::vector<QVector2D> interpolateEdges(RoadGraph* roads1, RoadEdgeDesc e1, RoadVertexDesc src1, RoadGraph* roads2, RoadEdgeDesc e2, RoadVertexDesc src2, float t);
 	static void computeImportanceOfEdges(RoadGraph* roads, float w_length, float w_valence, float w_lanes);
@@ -83,14 +81,11 @@ public:
 	static void saveRoads(RoadGraph& roads, const QString& filename);
 
 	// The entire graph related functions
-	//static RoadGraph* copyRoads(RoadGraph& roads, int roadType = 7);
 	static void copyRoads(RoadGraph& srcRoads, RoadGraph& dstRoads);
-	static void mergeRoads(RoadGraph* roads1, RoadGraph* roads2);
-	static void connectRoads(RoadGraph* roads1, RoadGraph* roads2, float connect_threshold);
+	static void mergeRoads(RoadGraph& roads1, RoadGraph& roads2);
+	static void connectRoads(RoadGraph& roads1, RoadGraph& roads2, float connect_threshold);
 	static BBox getAABoundingBox(RoadGraph& roads);
 	static BBox getBoudingBox(RoadGraph& roads, float theta1, float theta2, float theta_step = 0.087f);
-	static RoadGraph* extractMajorRoad(RoadGraph* roads, bool remove = true);
-	static float extractMajorRoad(RoadGraph* roads, RoadEdgeDesc root, QList<RoadEdgeDesc>& path);
 	static void extractRoads(RoadGraph& roads, int roadType = 7);
 	static void extractRoads(RoadGraph& roads, const AbstractArea& area, bool strict, int roadType = 7);
 	static void extractRoads2(RoadGraph& roads, const AbstractArea& area, int roadType = 7);
@@ -99,8 +94,8 @@ public:
 
 	// Connectivity related functions
 	static std::vector<RoadVertexDesc> getNeighbors(RoadGraph* roads, RoadVertexDesc v, bool onlyValidVertex = true);
-	static bool isNeighbor(RoadGraph* roads, RoadVertexDesc v1, RoadVertexDesc v2);
-	static bool isConnected(RoadGraph* roads, RoadVertexDesc desc1, RoadVertexDesc desc2, bool onlyValidEdge = true);
+	static bool isNeighbor(RoadGraph& roads, RoadVertexDesc v1, RoadVertexDesc v2);
+	static bool isConnected(RoadGraph& roads, RoadVertexDesc desc1, RoadVertexDesc desc2, bool onlyValidEdge = true);
 	static RoadVertexDesc findConnectedNearestNeighbor(RoadGraph* roads, const QVector2D &pt, RoadVertexDesc v);
 	static bool getEdge(RoadGraph* roads, const QVector2D &pt, float threshold, RoadEdgeDesc& e, bool onlyValidEdge = true);
 	static bool getEdge(RoadGraph* roads, RoadVertexDesc v, float threshold, RoadEdgeDesc& e, bool onlyValidEdge = true);
@@ -111,7 +106,7 @@ public:
 	static void reduce(RoadGraph& roads);
 	static bool reduce(RoadGraph& roads, RoadVertexDesc desc);
 	static void simplify(RoadGraph& roads, float dist_threshold);
-	static void normalize(RoadGraph* roads);
+	static void normalize(RoadGraph& roads);
 	static void singlify(RoadGraph& roads);
 	static void planarify(RoadGraph& roads);
 	static bool planarifyOne(RoadGraph& roads);
@@ -176,5 +171,6 @@ public:
 
 	// OpenCV
 	static void convertToMat(RoadGraph& roads, cv::Mat_<uchar>& mat, const cv::Size& size, bool flip = true);
+	static void drawRoadSegmentOnMat(RoadGraph& roads, RoadEdgeDesc e, cv::Mat& mat, int width = 3, int brightness = 255);
 };
 

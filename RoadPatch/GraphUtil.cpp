@@ -56,7 +56,7 @@ int GraphUtil::getNumVertices(RoadGraph& roads, bool onlyValidVertex) {
 /**
  * Return the number of vertices which are connected to the specified vertex.
  */
-int GraphUtil::getNumConnectedVertices(RoadGraph* roads, RoadVertexDesc start, bool onlyValidVertex) {
+int GraphUtil::getNumConnectedVertices(RoadGraph& roads, RoadVertexDesc start, bool onlyValidVertex) {
 	int count = 1;
 
 	QList<RoadVertexDesc> queue;
@@ -70,11 +70,11 @@ int GraphUtil::getNumConnectedVertices(RoadGraph* roads, RoadVertexDesc start, b
 		queue.pop_front();
 
 		RoadOutEdgeIter ei, eend;
-		for (boost::tie(ei, eend) = boost::out_edges(v, roads->graph); ei != eend; ++ei) {
-			if (onlyValidVertex && !roads->graph[*ei]->valid) continue;
+		for (boost::tie(ei, eend) = boost::out_edges(v, roads.graph); ei != eend; ++ei) {
+			if (onlyValidVertex && !roads.graph[*ei]->valid) continue;
 
-			RoadVertexDesc u = boost::target(*ei, roads->graph);
-			if (onlyValidVertex && !roads->graph[u]->valid) continue;
+			RoadVertexDesc u = boost::target(*ei, roads.graph);
+			if (onlyValidVertex && !roads.graph[u]->valid) continue;
 
 			if (visited.contains(u)) continue;
 
@@ -90,11 +90,11 @@ int GraphUtil::getNumConnectedVertices(RoadGraph* roads, RoadVertexDesc start, b
 /**
  * Return the index-th vertex.
  */
-RoadVertexDesc GraphUtil::getVertex(RoadGraph* roads, int index, bool onlyValidVertex) {
+RoadVertexDesc GraphUtil::getVertex(RoadGraph& roads, int index, bool onlyValidVertex) {
 	int count = 0;
 	RoadVertexIter vi, vend;
-	for (boost::tie(vi, vend) = boost::vertices(roads->graph); vi != vend; ++vi) {
-		if (onlyValidVertex && !roads->graph[*vi]->valid) continue;
+	for (boost::tie(vi, vend) = boost::vertices(roads.graph); vi != vend; ++vi) {
+		if (onlyValidVertex && !roads.graph[*vi]->valid) continue;
 
 		if (count == index) return *vi;
 
@@ -224,12 +224,12 @@ int GraphUtil::getVertexIndex(RoadGraph* roads, RoadVertexDesc desc, bool onlyVa
 /**
  * Add a vertex.
  */
-RoadVertexDesc GraphUtil::addVertex(RoadGraph* roads, RoadVertexPtr v) {
+RoadVertexDesc GraphUtil::addVertex(RoadGraph& roads, RoadVertexPtr v) {
 	RoadVertexPtr new_v = RoadVertexPtr(new RoadVertex(*v));
-	RoadVertexDesc new_v_desc = boost::add_vertex(roads->graph);
-	roads->graph[new_v_desc] = new_v;
+	RoadVertexDesc new_v_desc = boost::add_vertex(roads.graph);
+	roads.graph[new_v_desc] = new_v;
 
-	roads->setModified();
+	roads.setModified();
 
 	return new_v_desc;
 }
@@ -339,12 +339,12 @@ void GraphUtil::snapVertex(RoadGraph& roads, RoadVertexDesc v1, RoadVertexDesc v
 		// invalidate the old edge
 		roads.graph[*ei]->valid = false;
 
-		//if (v1b == v2) continue;
-		if (v1b != v2 && hasEdge(roads, v2, v1b)) continue;
+		if (v1b == v2) continue;
+		if (hasEdge(roads, v2, v1b)) continue;
 		//if (hasCloseEdge(roads, v2, v1b)) continue;	// <-- In this case, snap the edge to the other instead of discard it.
 
 		// add a new edge
-		addEdge(&roads, v2, v1b, roads.graph[*ei]);
+		addEdge(roads, v2, v1b, roads.graph[*ei]);
 	}
 
 	// invalidate v1
@@ -364,11 +364,11 @@ RoadVertexDesc GraphUtil::getCentralVertex(RoadGraph& roads) {
 /**
  * Return the index-th edge.
  */
-RoadEdgeDesc GraphUtil::getEdge(RoadGraph* roads, int index, bool onlyValidEdge) {
+RoadEdgeDesc GraphUtil::getEdge(RoadGraph& roads, int index, bool onlyValidEdge) {
 	int count = 0;
 	RoadEdgeIter ei, eend;
-	for (boost::tie(ei, eend) = boost::edges(roads->graph); ei != eend; ++ei) {
-		if (onlyValidEdge && !roads->graph[*ei]) continue;
+	for (boost::tie(ei, eend) = boost::edges(roads.graph); ei != eend; ++ei) {
+		if (onlyValidEdge && !roads.graph[*ei]) continue;
 
 		if (index == count) return *ei;
 		count++;
@@ -380,13 +380,13 @@ RoadEdgeDesc GraphUtil::getEdge(RoadGraph* roads, int index, bool onlyValidEdge)
 /**
  * Return the total lengths of the edges outing from the specified vertex.
  */
-float GraphUtil::getTotalEdgeLength(RoadGraph* roads, RoadVertexDesc v) {
+float GraphUtil::getTotalEdgeLength(RoadGraph& roads, RoadVertexDesc v) {
 	float ret = 0.0f;
 
 	RoadOutEdgeIter ei, eend;
-	for (boost::tie(ei, eend) = boost::out_edges(v, roads->graph); ei != eend; ++ei) {
-		if (!roads->graph[*ei]->valid) continue;
-		ret += roads->graph[*ei]->getLength();
+	for (boost::tie(ei, eend) = boost::out_edges(v, roads.graph); ei != eend; ++ei) {
+		if (!roads.graph[*ei]->valid) continue;
+		ret += roads.graph[*ei]->getLength();
 	}
 
 	return ret;
@@ -431,56 +431,36 @@ int GraphUtil::getNumEdges(RoadGraph& roads, bool onlyValidEdge) {
 
 /**
  * Add an edge.
- * Note: This function creates a straight line of edge.
+ * This function creates a straight line of edge.
  */
-RoadEdgeDesc GraphUtil::addEdge(RoadGraph* roads, RoadVertexDesc src, RoadVertexDesc tgt, unsigned int type, unsigned int lanes, bool oneWay) {
-	roads->setModified();
+RoadEdgeDesc GraphUtil::addEdge(RoadGraph& roads, RoadVertexDesc src, RoadVertexDesc tgt, unsigned int type, unsigned int lanes, bool oneWay) {
+	roads.setModified();
 
-	if (hasEdge(*roads, src, tgt, false)) {
-		// 既にエッジがある場合は、それを更新する
-		RoadEdgeDesc edge_desc = getEdge(*roads, src, tgt, false);
-		roads->graph[edge_desc]->polyLine.clear();
-		roads->graph[edge_desc]->addPoint(roads->graph[src]->getPt());
-		roads->graph[edge_desc]->addPoint(roads->graph[tgt]->getPt());
+	// エッジを新規追加する
+	RoadEdgePtr e = RoadEdgePtr(new RoadEdge(type, lanes, oneWay));
+	e->addPoint(roads.graph[src]->getPt());
+	e->addPoint(roads.graph[tgt]->getPt());
 
-		return edge_desc;
-	} else {
-		// エッジがない場合は、エッジを新規追加する
-		RoadEdgePtr e = RoadEdgePtr(new RoadEdge(type, lanes, oneWay));
-		e->addPoint(roads->graph[src]->getPt());
-		e->addPoint(roads->graph[tgt]->getPt());
+	std::pair<RoadEdgeDesc, bool> edge_pair = boost::add_edge(src, tgt, roads.graph);
+	roads.graph[edge_pair.first] = e;
 
-		std::pair<RoadEdgeDesc, bool> edge_pair = boost::add_edge(src, tgt, roads->graph);
-		roads->graph[edge_pair.first] = e;
-
-		return edge_pair.first;
-	}
+	return edge_pair.first;
 }
 
 /**
  * Add an edge.
- * Note: This function creates a edge which is copied from the reference edge.
+ * This function creates a edge which is copied from the reference edge.
  */
-RoadEdgeDesc GraphUtil::addEdge(RoadGraph* roads, RoadVertexDesc src, RoadVertexDesc tgt, RoadEdgePtr ref_edge) {
-	roads->setModified();
+RoadEdgeDesc GraphUtil::addEdge(RoadGraph& roads, RoadVertexDesc src, RoadVertexDesc tgt, RoadEdgePtr ref_edge) {
+	roads.setModified();
 
-	if (hasEdge(*roads, src, tgt, false)) {
-		// If there is an edge, update it instead of creating another one.
-		RoadEdgeDesc edge_desc = getEdge(*roads, src, tgt, false);
-		*roads->graph[edge_desc] = *ref_edge;
-		roads->graph[edge_desc]->valid = true;
+	RoadEdgePtr e = RoadEdgePtr(new RoadEdge(*ref_edge));
+	e->valid = true;
 
-		return edge_desc;
-	} else {
-		// If there is no edge, add an edge.
-		RoadEdgePtr e = RoadEdgePtr(new RoadEdge(*ref_edge));
-		e->valid = true;
+	std::pair<RoadEdgeDesc, bool> edge_pair = boost::add_edge(src, tgt, roads.graph);
+	roads.graph[edge_pair.first] = e;
 
-		std::pair<RoadEdgeDesc, bool> edge_pair = boost::add_edge(src, tgt, roads->graph);
-		roads->graph[edge_pair.first] = e;
-
-		return edge_pair.first;
-	}
+	return edge_pair.first;
 }
 
 /**
@@ -544,11 +524,11 @@ std::vector<QVector2D> GraphUtil::getOrderedPolyLine(RoadGraph* roads, RoadEdgeD
 /**
  * Sort the points of the polyline of the edge in such a way that the first point is the location of the src vertex.
  */
-void GraphUtil::orderPolyLine(RoadGraph* roads, RoadEdgeDesc e, RoadVertexDesc src) {
+void GraphUtil::orderPolyLine(RoadGraph& roads, RoadEdgeDesc e, RoadVertexDesc src) {
 	RoadVertexDesc tgt;
 
-	RoadVertexDesc s = boost::source(e, roads->graph);
-	RoadVertexDesc t = boost::target(e, roads->graph);
+	RoadVertexDesc s = boost::source(e, roads.graph);
+	RoadVertexDesc t = boost::target(e, roads.graph);
 
 	if (s == src) {
 		tgt = t;
@@ -557,8 +537,8 @@ void GraphUtil::orderPolyLine(RoadGraph* roads, RoadEdgeDesc e, RoadVertexDesc s
 	}
 
 	// If the order is opposite, reverse the order.
-	if ((roads->graph[src]->getPt() - roads->graph[e]->getPolyLine()[0]).lengthSquared() > (roads->graph[tgt]->getPt() - roads->graph[e]->getPolyLine()[0]).lengthSquared()) {
-		std::reverse(roads->graph[e]->polyLine.begin(), roads->graph[e]->polyLine.end());
+	if ((roads.graph[src]->getPt() - roads.graph[e]->getPolyLine()[0]).lengthSquared() > (roads.graph[tgt]->getPt() - roads.graph[e]->getPolyLine()[0]).lengthSquared()) {
+		std::reverse(roads.graph[e]->polyLine.begin(), roads.graph[e]->polyLine.end());
 	}
 }
 
@@ -639,8 +619,8 @@ bool GraphUtil::removeDeadEnd(RoadGraph& roads) {
  */
 std::vector<QVector2D> GraphUtil::interpolateEdges(RoadGraph* roads1, RoadEdgeDesc e1, RoadVertexDesc src1, RoadGraph* roads2, RoadEdgeDesc e2, RoadVertexDesc src2, float t) {
 
-	orderPolyLine(roads1, e1, src1);
-	orderPolyLine(roads2, e2, src2);
+	orderPolyLine(*roads1, e1, src1);
+	orderPolyLine(*roads2, e2, src2);
 
 	std::vector<QVector2D> polyLine1 = roads1->graph[e1]->polyLine;
 	std::vector<QVector2D> polyLine2 = roads2->graph[e2]->polyLine;
@@ -1168,82 +1148,82 @@ void GraphUtil::copyRoads(RoadGraph& srcRoads, RoadGraph& dstRoads) {
 }
 
 /**
- * Merge the 2nd road to the 1st road
+ * Merge the 2nd road to the 1st road. As a result, the roads1 will be updated containing all the vertices and edges of roads2.
  */
-void GraphUtil::mergeRoads(RoadGraph* roads1, RoadGraph* roads2) {
+void GraphUtil::mergeRoads(RoadGraph& roads1, RoadGraph& roads2) {
 	QMap<RoadVertexDesc, RoadVertexDesc> conv;
 
 	// copy vertices from the 2nd road to the 1st road
 	RoadVertexIter vi, vend;
-	for (boost::tie(vi, vend) = boost::vertices(roads2->graph); vi != vend; ++vi) {
-		if (!roads2->graph[*vi]->valid) continue;
+	for (boost::tie(vi, vend) = boost::vertices(roads2.graph); vi != vend; ++vi) {
+		if (!roads2.graph[*vi]->valid) continue;
 
-		RoadVertexPtr v1 = RoadVertexPtr(new RoadVertex(*roads2->graph[*vi]));
-		RoadVertexDesc v1_desc = boost::add_vertex(roads1->graph);
-		roads1->graph[v1_desc] = v1;
+		RoadVertexPtr v1 = RoadVertexPtr(new RoadVertex(*roads2.graph[*vi]));
+		RoadVertexDesc v1_desc = boost::add_vertex(roads1.graph);
+		roads1.graph[v1_desc] = v1;
 
 		conv[*vi] = v1_desc;
 	}
 
 	// copy edges from the 2nd road to the 1st road
 	RoadEdgeIter ei, eend;
-	for (boost::tie(ei, eend) = boost::edges(roads2->graph); ei != eend; ++ei) {
-		if (!roads2->graph[*ei]->valid) continue;
+	for (boost::tie(ei, eend) = boost::edges(roads2.graph); ei != eend; ++ei) {
+		if (!roads2.graph[*ei]->valid) continue;
 
-		RoadVertexDesc src2 = boost::source(*ei, roads2->graph);
-		RoadVertexDesc tgt2 = boost::target(*ei, roads2->graph);
+		RoadVertexDesc src2 = boost::source(*ei, roads2.graph);
+		RoadVertexDesc tgt2 = boost::target(*ei, roads2.graph);
 
 		RoadVertexDesc src1 = conv[src2];
 		RoadVertexDesc tgt1 = conv[tgt2];
 
-		addEdge(roads1, src1, tgt1, roads2->graph[*ei]);
+		addEdge(roads1, src1, tgt1, roads2.graph[*ei]);
 	}
 
-	roads1->setModified();
+	roads1.setModified();
 }
 
 /**
  * Connect roads1 to roads2 as much as possible.
  * roads1 will be updated. roads2 will be ramained as it is.
  */
-void GraphUtil::connectRoads(RoadGraph* roads1, RoadGraph* roads2, float connect_threshold) {
+void GraphUtil::connectRoads(RoadGraph& roads1, RoadGraph& roads2, float connect_threshold) {
 	QMap<RoadVertexDesc, RoadVertexDesc> conv;
 
 	// copy vertices from the 2nd road to the 1st road
 	RoadVertexIter vi, vend;
-	for (boost::tie(vi, vend) = boost::vertices(roads2->graph); vi != vend; ++vi) {
-		if (!roads2->graph[*vi]->valid) continue;
+	for (boost::tie(vi, vend) = boost::vertices(roads2.graph); vi != vend; ++vi) {
+		if (!roads2.graph[*vi]->valid) continue;
 
-		RoadVertexPtr v1 = RoadVertexPtr(new RoadVertex(*roads2->graph[*vi]));
-		RoadVertexDesc v1_desc = boost::add_vertex(roads1->graph);
-		roads1->graph[v1_desc] = v1;
+		RoadVertexPtr v1 = RoadVertexPtr(new RoadVertex(*roads2.graph[*vi]));
+		RoadVertexDesc v1_desc = boost::add_vertex(roads1.graph);
+		roads1.graph[v1_desc] = v1;
 
 		conv[*vi] = v1_desc;
 	}
 
 	// copy edges from the 2nd road to the 1st road
 	RoadEdgeIter ei, eend;
-	for (boost::tie(ei, eend) = boost::edges(roads2->graph); ei != eend; ++ei) {
-		if (!roads2->graph[*ei]->valid) continue;
+	for (boost::tie(ei, eend) = boost::edges(roads2.graph); ei != eend; ++ei) {
+		if (!roads2.graph[*ei]->valid) continue;
 
-		RoadVertexDesc src2 = boost::source(*ei, roads2->graph);
-		RoadVertexDesc tgt2 = boost::target(*ei, roads2->graph);
+		RoadVertexDesc src2 = boost::source(*ei, roads2.graph);
+		RoadVertexDesc tgt2 = boost::target(*ei, roads2.graph);
 
-		if (isIntersect(roads1, roads2->graph[*ei]->polyLine)) continue;
+		if (isIntersect(&roads1, roads2.graph[*ei]->polyLine)) continue;
 
 		RoadVertexDesc src1 = conv[src2];
 		RoadVertexDesc tgt1 = conv[tgt2];
 
-		addEdge(roads1, src1, tgt1, roads2->graph[*ei]);
+		addEdge(roads1, src1, tgt1, roads2.graph[*ei]);
 	}
 
 	// for each roads2 vertex, try to find the close vertex of roads1 to connect
-	for (boost::tie(vi, vend) = boost::vertices(roads2->graph); vi != vend; ++vi) {
-		if (!roads2->graph[*vi]->valid) continue;
-		if (getDegree(*roads1, conv[*vi]) > 1) continue;
+	for (boost::tie(vi, vend) = boost::vertices(roads2.graph); vi != vend; ++vi) {
+		if (!roads2.graph[*vi]->valid) continue;
+		if (getDegree(roads1, conv[*vi]) > 1) continue;
 
 		RoadVertexDesc v1_desc;
-		if (getVertex(*roads1, roads1->graph[conv[*vi]]->pt, connect_threshold, conv[*vi], v1_desc)) {
+		if (getVertex(roads1, roads1.graph[conv[*vi]]->pt, connect_threshold, conv[*vi], v1_desc)) {
 			if (!conv.contains(v1_desc)) {
 				addEdge(roads1, v1_desc, conv[*vi], 1, 1, false);	// to be updated!!!
 				continue;
@@ -1251,18 +1231,18 @@ void GraphUtil::connectRoads(RoadGraph* roads1, RoadGraph* roads2, float connect
 		}
 
 		RoadEdgeDesc e1_desc;
-		if (getEdge(roads1, *vi, connect_threshold, e1_desc)) {
-			RoadVertexDesc src = boost::source(e1_desc, roads1->graph);
-			RoadVertexDesc tgt = boost::target(e1_desc, roads1->graph);
+		if (getEdge(&roads1, *vi, connect_threshold, e1_desc)) {
+			RoadVertexDesc src = boost::source(e1_desc, roads1.graph);
+			RoadVertexDesc tgt = boost::target(e1_desc, roads1.graph);
 
 			if (!conv.contains(src) || !conv.contains(tgt)) {
-				v1_desc = splitEdge(roads1, e1_desc, roads2->graph[*vi]->pt);
+				v1_desc = splitEdge(&roads1, e1_desc, roads2.graph[*vi]->pt);
 				addEdge(roads1, v1_desc, conv[*vi], 1, 1, false);	// to be updated!!!
 			}
 		}
 	}
 
-	roads1->setModified();
+	roads1.setModified();
 }
 
 /**
@@ -1310,69 +1290,6 @@ BBox GraphUtil::getBoudingBox(RoadGraph& roads, float theta1, float theta2, floa
 }
 
 /**
- * Extract major roads from the road graph.
- * If remove is true, the extracted edges are removed from the original road graph, i.e. their "valid" flags become false.
- */
-RoadGraph* GraphUtil::extractMajorRoad(RoadGraph* roads, bool remove) {
-	float max_length = 0.0f;
-	QList<RoadEdgeDesc> max_path;
-
-	RoadEdgeIter ei, eend;
-	for (boost::tie(ei, eend) = boost::edges(roads->graph); ei != eend; ++ei) {
-		if (!roads->graph[*ei]->valid) continue;
-
-		QList<RoadEdgeDesc> path;
-		float length = extractMajorRoad(roads, *ei, path);
-		if (length > max_length) {
-			max_length = length;
-			max_path = path;
-		}
-	}
-
-	QMap<RoadVertexDesc, RoadVertexDesc> conv;
-
-	// Generate a road graph with one main road segment.
-	RoadGraph* new_roads = new RoadGraph();
-	for (QList<RoadEdgeDesc>::iterator it = max_path.begin(); it != max_path.end(); ++it) {
-		RoadVertexDesc src = boost::source(*it, roads->graph);
-		RoadVertexDesc tgt = boost::target(*it, roads->graph);
-
-		// Retrieve the corresponding vertex to src.
-		RoadVertexDesc new_src;
-		if (conv.contains(src)) {
-			new_src = conv[src];
-		} else {
-			RoadVertexPtr v = RoadVertexPtr(new RoadVertex(roads->graph[src]->getPt()));
-			new_src = boost::add_vertex(new_roads->graph);
-			new_roads->graph[new_src] = v;
-			conv[src] = new_src;
-		}
-
-		// Retrieve the corresponding vertex to tgt.
-		RoadVertexDesc new_tgt;
-		if (conv.contains(tgt)) {
-			new_tgt = conv[tgt];
-		} else {
-			RoadVertexPtr v = RoadVertexPtr(new RoadVertex(roads->graph[tgt]->getPt()));
-			new_tgt = boost::add_vertex(new_roads->graph);
-			new_roads->graph[new_tgt] = v;
-			conv[tgt] = new_tgt;
-		}
-
-		// Add an edge
-		RoadEdgeDesc e = getEdge(roads, src, tgt);
-		addEdge(new_roads, new_src, new_tgt, roads->graph[e]->type, roads->graph[e]->lanes, roads->graph[e]->oneWay);
-
-		if (remove) {
-			// remove the edge from the original road graph.
-			roads->graph[e]->valid = false;
-		}
-	}
-
-	return new_roads;
-}
-
-/**
  * Extract the specified type of road segments.
  * Note that this function does not change neither the vertex desc nor the edge desc.
  */
@@ -1391,81 +1308,6 @@ void GraphUtil::extractRoads(RoadGraph& roads, int roadType) {
 	removeIsolatedVertices(roads);
 
 	roads.setModified();
-}
-
-/**
- * Extract the longest straight road segment that starts from "root".
- */
-float GraphUtil::extractMajorRoad(RoadGraph* roads, RoadEdgeDesc root, QList<RoadEdgeDesc>& path) {
-	path.clear();
-	path.push_back(root);
-
-	float length = roads->graph[root]->getLength();
-
-	RoadVertexDesc root1 = boost::source(root, roads->graph);
-	RoadVertexDesc root2 = boost::target(root, roads->graph);
-
-	QList<RoadVertexDesc> visited;
-	visited.push_back(root1);
-	visited.push_back(root2);
-
-	QList<RoadVertexDesc> queue;
-	queue.push_back(root1);
-	queue.push_back(root2);
-
-	QList<float> angles;
-	QVector2D dir = roads->graph[root1]->getPt() - roads->graph[root2]->getPt();
-	angles.push_back(atan2f(dir.y(), dir.x()));
-	angles.push_back(atan2f(-dir.y(), -dir.x()));
-
-	while (!queue.empty()) {
-		RoadVertexDesc v = queue.front();
-		queue.pop_front();
-
-		float angle = angles.front();
-		angles.pop_front();
-
-		float min_angle;
-		float min_diff_angle = std::numeric_limits<float>::max();
-		RoadVertexDesc min_u;
-		RoadEdgeDesc min_e;
-		float len;
-
-		// For each neighbor
-		RoadOutEdgeIter ei, eend;
-		for (boost::tie(ei, eend) = boost::out_edges(v, roads->graph); ei != eend; ++ei) {
-			if (!roads->graph[*ei]->valid) continue;
-
-			RoadVertexDesc u = boost::target(*ei, roads->graph);
-			if (!roads->graph[u]->valid) continue;
-
-			// Skip the node if it is already visited.
-			if (visited.contains(u)) continue;
-
-			QVector2D dir2 = roads->graph[u]->getPt() - roads->graph[v]->getPt();
-			float angle2 = atan2f(dir2.y(), dir2.x());
-			float diff_angle = diffAngle(angle2, angle);
-			if (diff_angle < min_diff_angle) {
-				min_diff_angle = diff_angle;
-				min_angle = angle2;
-				min_u = u;
-				min_e = *ei;
-				len = roads->graph[*ei]->getLength();
-			}
-		}
-
-		// If the angle is less than 20 degree, consider it as straight.
-		if (min_diff_angle < M_PI * 20.0f / 180.0f) {
-			path.push_back(min_e);
-			length += len;
-
-			queue.push_back(min_u);
-			angles.push_back(min_angle);
-			visited.push_back(min_u);
-		}
-	}
-
-	return length;
 }
 
 /**
@@ -1553,10 +1395,10 @@ void GraphUtil::extractRoads2(RoadGraph& roads, const AbstractArea& area, int ro
 
 		RoadVertexDesc v = splitEdge(&roads, edges[e_id], intPt);
 		if (area.contains(roads.graph[src]->pt)) {
-			RoadEdgeDesc e = getEdge(&roads, v, tgt);
+			RoadEdgeDesc e = getEdge(roads, v, tgt);
 			roads.graph[e]->valid = false;
 		} else {
-			RoadEdgeDesc e = getEdge(&roads, v, src);
+			RoadEdgeDesc e = getEdge(roads, v, src);
 			roads.graph[e]->valid = false;
 		}
 	}
@@ -1698,15 +1540,18 @@ std::vector<RoadVertexDesc> GraphUtil::getNeighbors(RoadGraph* roads, RoadVertex
 	return neighbors;
 }
 
-bool GraphUtil::isNeighbor(RoadGraph* roads, RoadVertexDesc v1, RoadVertexDesc v2) {
+/**
+ * v1とv2が隣接した頂点かどうかチェックする。
+ */
+bool GraphUtil::isNeighbor(RoadGraph& roads, RoadVertexDesc v1, RoadVertexDesc v2) {
 	RoadOutEdgeIter ei, eend;
-	for (boost::tie(ei, eend) = boost::out_edges(v1, roads->graph); ei != eend; ++ei) {
-		if (!roads->graph[*ei]->valid) continue;
-		if (boost::target(*ei, roads->graph) == v2) return true;
+	for (boost::tie(ei, eend) = boost::out_edges(v1, roads.graph); ei != eend; ++ei) {
+		if (!roads.graph[*ei]->valid) continue;
+		if (boost::target(*ei, roads.graph) == v2) return true;
 	}
-	for (boost::tie(ei, eend) = boost::out_edges(v2, roads->graph); ei != eend; ++ei) {
-		if (!roads->graph[*ei]->valid) continue;
-		if (boost::target(*ei, roads->graph) == v1) return true;
+	for (boost::tie(ei, eend) = boost::out_edges(v2, roads.graph); ei != eend; ++ei) {
+		if (!roads.graph[*ei]->valid) continue;
+		if (boost::target(*ei, roads.graph) == v1) return true;
 	}
 
 	return false;
@@ -1715,7 +1560,7 @@ bool GraphUtil::isNeighbor(RoadGraph* roads, RoadVertexDesc v1, RoadVertexDesc v
 /**
  * Check if desc2 is reachable from desc1.
  */
-bool GraphUtil::isConnected(RoadGraph* roads, RoadVertexDesc desc1, RoadVertexDesc desc2, bool onlyValidEdge) {
+bool GraphUtil::isConnected(RoadGraph& roads, RoadVertexDesc desc1, RoadVertexDesc desc2, bool onlyValidEdge) {
 	QList<RoadVertexDesc> seeds;
 	QSet<RoadVertexDesc> visited;
 
@@ -1729,11 +1574,11 @@ bool GraphUtil::isConnected(RoadGraph* roads, RoadVertexDesc desc1, RoadVertexDe
 		visited.insert(v);
 
 		RoadOutEdgeIter ei, eend;
-		for (boost::tie(ei, eend) = boost::out_edges(v, roads->graph); ei != eend; ++ei) {
-			if (onlyValidEdge && !roads->graph[*ei]->valid) continue;
+		for (boost::tie(ei, eend) = boost::out_edges(v, roads.graph); ei != eend; ++ei) {
+			if (onlyValidEdge && !roads.graph[*ei]->valid) continue;
 
-			RoadVertexDesc u = boost::target(*ei, roads->graph);
-			if (onlyValidEdge && !roads->graph[u]->valid) continue;
+			RoadVertexDesc u = boost::target(*ei, roads.graph);
+			if (onlyValidEdge && !roads.graph[u]->valid) continue;
 
 			if (u == desc2) return true;
 
@@ -2026,8 +1871,8 @@ bool GraphUtil::reduce(RoadGraph& roads, RoadVertexDesc desc) {
 	if (hasEdge(roads, vd[0], vd[1])) return false;
 
 	RoadEdgePtr new_edge = RoadEdgePtr(new RoadEdge(edges[0]->type, edges[0]->lanes, edges[0]->oneWay));
-	orderPolyLine(&roads, ed[0], vd[0]);
-	orderPolyLine(&roads, ed[1], desc);
+	orderPolyLine(roads, ed[0], vd[0]);
+	orderPolyLine(roads, ed[1], desc);
 	
 	for (int i = 0; i < edges[0]->getPolyLine().size(); i++) {
 		new_edge->addPoint(edges[0]->getPolyLine()[i]);
@@ -2096,10 +1941,10 @@ void GraphUtil::simplify(RoadGraph& roads, float dist_threshold) {
 
 			// update the edge
 			if (!GraphUtil::hasEdge(roads, src, *vi)) {
-				addEdge(&roads, src, *vi, roads.graph[e]->type, roads.graph[e]->lanes, roads.graph[e]->oneWay);
+				addEdge(roads, src, *vi, roads.graph[e]->type, roads.graph[e]->lanes, roads.graph[e]->oneWay);
 			}
 			if (!GraphUtil::hasEdge(roads, tgt, *vi)) {
-				addEdge(&roads, tgt, *vi, roads.graph[e]->type, roads.graph[e]->lanes, roads.graph[e]->oneWay);
+				addEdge(roads, tgt, *vi, roads.graph[e]->type, roads.graph[e]->lanes, roads.graph[e]->oneWay);
 			}
 		}
 	}
@@ -2110,21 +1955,21 @@ void GraphUtil::simplify(RoadGraph& roads, float dist_threshold) {
 /**
  * エッジのポリゴンが3つ以上で構成されている場合、中間点を全てノードとして登録する。
  */
-void GraphUtil::normalize(RoadGraph* roads) {
+void GraphUtil::normalize(RoadGraph& roads) {
 	RoadEdgeIter ei, eend;
-	for (boost::tie(ei, eend) = boost::edges(roads->graph); ei != eend; ++ei) {
-		if (!roads->graph[*ei]->valid) continue;
-		if (roads->graph[*ei]->getPolyLine().size() <= 2) continue;
+	for (boost::tie(ei, eend) = boost::edges(roads.graph); ei != eend; ++ei) {
+		if (!roads.graph[*ei]->valid) continue;
+		if (roads.graph[*ei]->getPolyLine().size() <= 2) continue;
 
 		// invalidate the edge
-		roads->graph[*ei]->valid = false;
+		roads.graph[*ei]->valid = false;
 
-		RoadVertexDesc src = boost::source(*ei, roads->graph);
-		RoadVertexDesc tgt = boost::target(*ei, roads->graph);
+		RoadVertexDesc src = boost::source(*ei, roads.graph);
+		RoadVertexDesc tgt = boost::target(*ei, roads.graph);
 
 		RoadVertexDesc prev_desc;
 		RoadVertexDesc last_desc;
-		if ((roads->graph[src]->getPt() - roads->graph[*ei]->getPolyLine()[0]).lengthSquared() < (roads->graph[tgt]->getPt() - roads->graph[*ei]->getPolyLine()[0]).lengthSquared()) {
+		if ((roads.graph[src]->getPt() - roads.graph[*ei]->getPolyLine()[0]).lengthSquared() < (roads.graph[tgt]->getPt() - roads.graph[*ei]->getPolyLine()[0]).lengthSquared()) {
 			prev_desc = src;
 			last_desc = tgt;
 		} else {
@@ -2132,20 +1977,20 @@ void GraphUtil::normalize(RoadGraph* roads) {
 			last_desc = src;
 		}
 
-		for (int i = 1; i < roads->graph[*ei]->getPolyLine().size() - 1; i++) {
+		for (int i = 1; i < roads.graph[*ei]->getPolyLine().size() - 1; i++) {
 			// add all the points along the poly line as vertices
-			RoadVertexPtr new_v = RoadVertexPtr(new RoadVertex(roads->graph[*ei]->getPolyLine()[i]));
-			RoadVertexDesc new_v_desc = boost::add_vertex(roads->graph);
-			roads->graph[new_v_desc] = new_v;
+			RoadVertexPtr new_v = RoadVertexPtr(new RoadVertex(roads.graph[*ei]->getPolyLine()[i]));
+			RoadVertexDesc new_v_desc = boost::add_vertex(roads.graph);
+			roads.graph[new_v_desc] = new_v;
 
 			// Add an edge
-			addEdge(roads, prev_desc, new_v_desc, roads->graph[*ei]->type, roads->graph[*ei]->lanes, roads->graph[*ei]->oneWay);
+			addEdge(roads, prev_desc, new_v_desc, roads.graph[*ei]->type, roads.graph[*ei]->lanes, roads.graph[*ei]->oneWay);
 
 			prev_desc = new_v_desc;
 		}
 
 		// Add the last edge
-		addEdge(roads, prev_desc, last_desc, roads->graph[*ei]->type, roads->graph[*ei]->lanes, roads->graph[*ei]->oneWay);
+		addEdge(roads, prev_desc, last_desc, roads.graph[*ei]->type, roads.graph[*ei]->lanes, roads.graph[*ei]->oneWay);
 	}
 }
 
@@ -2162,7 +2007,7 @@ void GraphUtil::singlify(RoadGraph& roads) {
 	for (boost::tie(vi, vend) = boost::vertices(roads.graph); vi != vend; ++vi) {
 		if (!roads.graph[*vi]->valid) continue;
 
-		int size = getNumConnectedVertices(&roads, *vi);
+		int size = getNumConnectedVertices(roads, *vi);
 		if (size > max_size) {
 			max_size = size;
 			start = *vi;
@@ -2214,7 +2059,7 @@ void GraphUtil::singlify(RoadGraph& roads) {
 
 			// Add an edge
 			if (!hasEdge(new_roads, new_v_desc, new_u_desc)) {
-				addEdge(&new_roads, new_v_desc, new_u_desc, roads.graph[*oei]);
+				addEdge(new_roads, new_v_desc, new_u_desc, roads.graph[*oei]);
 			}
 
 			if (!conv.contains(u_desc)) {
@@ -2282,11 +2127,11 @@ bool GraphUtil::planarifyOne(RoadGraph& roads) {
 						roads.graph[*ei2]->valid = false;
 
 						// 新たなエッジを追加する
-						addEdge(&roads, src, new_v_desc, roads.graph[*ei]->type, roads.graph[*ei]->lanes, roads.graph[*ei]->oneWay);
-						addEdge(&roads, new_v_desc, tgt, roads.graph[*ei]->type, roads.graph[*ei]->lanes, roads.graph[*ei]->oneWay);
+						addEdge(roads, src, new_v_desc, roads.graph[*ei]->type, roads.graph[*ei]->lanes, roads.graph[*ei]->oneWay);
+						addEdge(roads, new_v_desc, tgt, roads.graph[*ei]->type, roads.graph[*ei]->lanes, roads.graph[*ei]->oneWay);
 
-						addEdge(&roads, src2, new_v_desc, roads.graph[*ei2]->type, roads.graph[*ei2]->lanes, roads.graph[*ei2]->oneWay);
-						addEdge(&roads, new_v_desc, tgt2, roads.graph[*ei2]->type, roads.graph[*ei2]->lanes, roads.graph[*ei2]->oneWay);
+						addEdge(roads, src2, new_v_desc, roads.graph[*ei2]->type, roads.graph[*ei2]->lanes, roads.graph[*ei2]->oneWay);
+						addEdge(roads, new_v_desc, tgt2, roads.graph[*ei2]->type, roads.graph[*ei2]->lanes, roads.graph[*ei2]->oneWay);
 
 						return true;
 					}
@@ -2488,7 +2333,7 @@ RoadGraph* GraphUtil::convertToGridNetwork(RoadGraph* roads, RoadVertexDesc star
 
 			if (!hasEdge(*new_roads, new_v_desc, new_u_desc)) {
 				// エッジを追加
-				addEdge(new_roads, new_v_desc, new_u_desc, roads->graph[*ei]->type, roads->graph[*ei]->lanes, roads->graph[*ei]->oneWay);
+				addEdge(*new_roads, new_v_desc, new_u_desc, roads->graph[*ei]->type, roads->graph[*ei]->lanes, roads->graph[*ei]->oneWay);
 			}
 
 			if (!visited.contains(u_desc)) {
@@ -2767,7 +2612,7 @@ void GraphUtil::snapDeadendEdges(RoadGraph& roads, float threshold) {
 				roads.graph[new_e_desc]->polyLine = roads.graph[e_desc]->polyLine;
 			} else {
 				// 該当頂点間にエッジがない場合は、新しいエッジを追加する
-				GraphUtil::addEdge(&roads, nearest_desc, tgt, roads.graph[e_desc]);
+				GraphUtil::addEdge(roads, nearest_desc, tgt, roads.graph[e_desc]);
 			}
 
 			// 古いエッジを無効にする
@@ -3176,7 +3021,7 @@ float GraphUtil::computeSimilarity(RoadGraph* roads1, QMap<RoadVertexDesc, RoadV
 
 			if (!hasEdge(*roads2, src2, tgt2)) continue;
 
-			RoadEdgeDesc e2 = getEdge(roads2, src2, tgt2);
+			RoadEdgeDesc e2 = getEdge(*roads2, src2, tgt2);
 			if (roads2UsedEdges.contains(e2)) continue;
 			roads2UsedEdges.push_back(e2);
 
@@ -3220,7 +3065,7 @@ float GraphUtil::computeSimilarity(RoadGraph* roads1, QMap<RoadVertexDesc, RoadV
 
 			if (!hasEdge(*roads1, src1, tgt1)) continue;
 
-			RoadEdgeDesc e1 = getEdge(roads1, src1, tgt1);
+			RoadEdgeDesc e1 = getEdge(*roads1, src1, tgt1);
 			if (roads1UsedEdges.contains(e1)) continue;
 			roads1UsedEdges.push_back(e1);
 
@@ -3323,8 +3168,8 @@ QMap<RoadVertexDesc, RoadVertexDesc> GraphUtil::findCorrespondentEdges(RoadGraph
 			// find the maximum of the difference in angle
 			float diff = 0.0f;
 			for (int i = 0; i < children1.size(); i++) {
-				RoadEdgeDesc e1 = getEdge(roads1, parent1, children1[i]);
-				RoadEdgeDesc e2 = getEdge(roads2, parent2, children2[permutation[i]]);
+				RoadEdgeDesc e1 = getEdge(*roads1, parent1, children1[i]);
+				RoadEdgeDesc e2 = getEdge(*roads2, parent2, children2[permutation[i]]);
 
 				QVector2D dir1;
 				if ((roads1->graph[parent1]->pt - roads1->graph[e1]->polyLine[0]).length() < (roads1->graph[parent1]->pt - roads1->graph[e1]->polyLine[roads1->graph[e1]->polyLine.size() - 1]).length()) {
@@ -3367,8 +3212,8 @@ QMap<RoadVertexDesc, RoadVertexDesc> GraphUtil::findCorrespondentEdges(RoadGraph
 			// find the maximum of difference in angle
 			float diff = 0.0f;
 			for (int i = 0; i < children2.size(); i++) {
-				RoadEdgeDesc e1 = getEdge(roads1, parent1, children1[permutation[i]]);
-				RoadEdgeDesc e2 = getEdge(roads2, parent2, children2[i]);
+				RoadEdgeDesc e1 = getEdge(*roads1, parent1, children1[permutation[i]]);
+				RoadEdgeDesc e2 = getEdge(*roads2, parent2, children2[i]);
 
 				QVector2D dir1;
 				if ((roads1->graph[parent1]->pt - roads1->graph[e1]->polyLine[0]).length() < (roads1->graph[parent1]->pt - roads1->graph[e1]->polyLine[roads1->graph[e1]->polyLine.size() - 1]).length()) {
@@ -3488,8 +3333,8 @@ void GraphUtil::findCorrespondence(RoadGraph* roads1, AbstractForest* forest1, R
 			if (diffAngle(roads1->graph[child1]->pt - roads1->graph[parent1]->pt, roads2->graph[child2]->pt - roads2->graph[parent2]->pt) > threshold_angle) continue;
 
 			// set fullyPaired flags
-			roads1->graph[getEdge(roads1, parent1, child1)]->fullyPaired = true;
-			roads2->graph[getEdge(roads2, parent2, child2)]->fullyPaired = true;
+			roads1->graph[getEdge(*roads1, parent1, child1)]->fullyPaired = true;
+			roads2->graph[getEdge(*roads2, parent2, child2)]->fullyPaired = true;
 
 			// update the matching
 			if (map1.contains(child1) || map2.contains(child2)) continue;
@@ -3538,11 +3383,11 @@ bool GraphUtil::forceMatching(RoadGraph* roads1, RoadVertexDesc parent1, Abstrac
 		RoadVertexDesc v_desc = boost::add_vertex(roads2->graph);
 		roads2->graph[v_desc] = v;
 
-		RoadEdgeDesc e1_desc = GraphUtil::getEdge(roads1, parent1, children1[i]);
+		RoadEdgeDesc e1_desc = GraphUtil::getEdge(*roads1, parent1, children1[i]);
 
 		// 相手の親ノードと子ノードの間にエッジを作成する
 		//RoadEdgeDesc e2_desc = GraphUtil::addEdge(roads2, parent2, v_desc, roads1->graph[e1_desc]->lanes, roads1->graph[e1_desc]->type, roads1->graph[e1_desc]->oneWay);
-		RoadEdgeDesc e2_desc = GraphUtil::addEdge(roads2, parent2, v_desc, roads1->graph[e1_desc]);
+		RoadEdgeDesc e2_desc = GraphUtil::addEdge(*roads2, parent2, v_desc, roads1->graph[e1_desc]);
 		roads2->graph[e2_desc]->polyLine.clear();
 		roads2->graph[e2_desc]->addPoint(roads2->graph[parent2]->pt);
 		roads2->graph[e2_desc]->addPoint(roads2->graph[v_desc]->pt);
@@ -3564,11 +3409,11 @@ bool GraphUtil::forceMatching(RoadGraph* roads1, RoadVertexDesc parent1, Abstrac
 		RoadVertexDesc v_desc = boost::add_vertex(roads1->graph);
 		roads1->graph[v_desc] = v;
 
-		RoadEdgeDesc e2_desc = GraphUtil::getEdge(roads2, parent2, children2[i]);
+		RoadEdgeDesc e2_desc = GraphUtil::getEdge(*roads2, parent2, children2[i]);
 
 		// 相手の親ノードと子ノードの間にエッジを作成する
 		//GraphUtil::addEdge(roads1, parent1, v_desc, roads2->graph[e2_desc]->lanes, roads2->graph[e2_desc]->type, roads2->graph[e2_desc]->oneWay);
-		RoadEdgeDesc e1_desc = GraphUtil::addEdge(roads1, parent1, v_desc, roads2->graph[e2_desc]);
+		RoadEdgeDesc e1_desc = GraphUtil::addEdge(*roads1, parent1, v_desc, roads2->graph[e2_desc]);
 		roads1->graph[e1_desc]->polyLine.clear();
 		roads1->graph[e1_desc]->addPoint(roads1->graph[parent1]->pt);
 		roads1->graph[e1_desc]->addPoint(roads1->graph[v_desc]->pt);
@@ -3630,13 +3475,13 @@ RoadGraph* GraphUtil::interpolate(RoadGraph* roads1, RoadGraph* roads2, QMap<Roa
 
 		// Is there a corresponding edge?
 		if (GraphUtil::hasEdge(*roads2, v2, u2)) {
-			RoadEdgeDesc e2 = GraphUtil::getEdge(roads2, v2, u2);
+			RoadEdgeDesc e2 = GraphUtil::getEdge(*roads2, v2, u2);
 
-			RoadEdgeDesc e_desc = GraphUtil::addEdge(new_roads, conv[v1], conv[u1], roads1->graph[*ei]->type, roads1->graph[*ei]->lanes, roads1->graph[*ei]->oneWay);
+			RoadEdgeDesc e_desc = GraphUtil::addEdge(*new_roads, conv[v1], conv[u1], roads1->graph[*ei]->type, roads1->graph[*ei]->lanes, roads1->graph[*ei]->oneWay);
 			new_roads->graph[e_desc]->polyLine = GraphUtil::interpolateEdges(roads1, *ei, v1, roads2, e2, v2, t);
 		} else {
 			// since there is no corresponding edge on roads2, just add the edge of roads1.
-			RoadEdgeDesc e_desc = GraphUtil::addEdge(new_roads, conv[v1], conv[u1], roads1->graph[*ei]);
+			RoadEdgeDesc e_desc = GraphUtil::addEdge(*new_roads, conv[v1], conv[u1], roads1->graph[*ei]);
 			GraphUtil::moveEdge(*new_roads, e_desc, new_roads->graph[conv[v1]]->pt, new_roads->graph[conv[u1]]->pt);
 		}
 	}
@@ -3686,9 +3531,9 @@ RoadGraph* GraphUtil::interpolate(RoadGraph* roads1, const QVector2D& center, fl
 
 		// Is there a corresponding edge?
 		if (GraphUtil::hasEdge(*roads2, v2, u2)) {
-			RoadEdgeDesc e2 = GraphUtil::getEdge(roads2, v2, u2);
+			RoadEdgeDesc e2 = GraphUtil::getEdge(*roads2, v2, u2);
 
-			RoadEdgeDesc e_desc = GraphUtil::addEdge(new_roads, conv[v1], conv[u1], roads1->graph[*ei]->type, roads1->graph[*ei]->lanes, roads1->graph[*ei]->oneWay);
+			RoadEdgeDesc e_desc = GraphUtil::addEdge(*new_roads, conv[v1], conv[u1], roads1->graph[*ei]->type, roads1->graph[*ei]->lanes, roads1->graph[*ei]->oneWay);
 			//new_roads->graph[e_desc]->polyLine.clear();
 
 			// interpolate two polylines
@@ -3696,7 +3541,7 @@ RoadGraph* GraphUtil::interpolate(RoadGraph* roads1, const QVector2D& center, fl
 
 		} else {
 			// since there is no corresponding edge on roads2, just add the edge of roads1.
-			RoadEdgeDesc e_desc = GraphUtil::addEdge(new_roads, conv[v1], conv[u1], roads1->graph[*ei]);
+			RoadEdgeDesc e_desc = GraphUtil::addEdge(*new_roads, conv[v1], conv[u1], roads1->graph[*ei]);
 			GraphUtil::moveEdge(*new_roads, e_desc, new_roads->graph[conv[v1]]->pt, new_roads->graph[conv[u1]]->pt);
 		}
 	}
@@ -4149,17 +3994,17 @@ RoadGraph* GraphUtil::createGridNetwork(float size, int num) {
 	// エッジを作成
 	for (int i = 0; i < num - 2; i++) {
 		for (int j = 0; j < num - 1; j++) {
-			addEdge(roads, i * num + j, i * num + j + 1, 2, 2);
+			addEdge(*roads, i * num + j, i * num + j + 1, 2, 2);
 		}
 	}
 	for (int i = 0; i < num - 3; i++) {
 		for (int j = 0; j < num - 2; j++) {
-			addEdge(roads, i * num + 1 + j, i * num + 1 + j + num, 2, 2);
+			addEdge(*roads, i * num + 1 + j, i * num + 1 + j + num, 2, 2);
 		}
 	}
 	for (int i = 0; i < num - 2; i++) {
-		addEdge(roads, num * (num - 2) + i, i + 1, 2, 2);
-		addEdge(roads, num * (num - 2) + (num - 2) + i, num * (num - 3) + i + 1, 2, 2);
+		addEdge(*roads, num * (num - 2) + i, i + 1, 2, 2);
+		addEdge(*roads, num * (num - 2) + (num - 2) + i, num * (num - 3) + i + 1, 2, 2);
 	}
 
 	return roads;
@@ -4311,11 +4156,11 @@ RoadGraph* GraphUtil::createRadialNetwork(float size, int num, int degree) {
 
 	// エッジを追加
 	for (int i = 0; i < degree; i++) {
-		addEdge(roads, 0, i + 1, 2, 2);
+		addEdge(*roads, 0, i + 1, 2, 2);
 	}
 	for (int i = 0; i < num; i++) {
 		for (int j = 0; j < degree; j++) {
-			addEdge(roads, 1 + i * degree + j, 1 + (i + 1) * degree + j, 2, 2);
+			addEdge(*roads, 1 + i * degree + j, 1 + (i + 1) * degree + j, 2, 2);
 		}
 	}
 	for (int i = 0; i < num; i++) {
@@ -4392,13 +4237,21 @@ void GraphUtil::convertToMat(RoadGraph& roads, cv::Mat_<uchar>& mat, const cv::S
 
 	RoadEdgeIter ei, eend;
 	for (boost::tie(ei, eend) = boost::edges(roads.graph); ei != eend; ++ei) {
-		for (int i = 0; i < roads.graph[*ei]->polyLine.size() - 1; i++) {
-			QVector2D p0 = roads.graph[*ei]->polyLine[i];
-			QVector2D p1 = roads.graph[*ei]->polyLine[i + 1];
-			cv::line(mat, cv::Point(p0.x(), p0.y()), cv::Point(p1.x(), p1.y()), cv::Scalar(255), 3, CV_AA);
-		}
+		drawRoadSegmentOnMat(roads, *ei, mat);
 	}
 
 	// 上下を反転
 	if (flip) cv::flip(mat, mat, 0);
+}
+
+/**
+ * 道路のエッジを、cv::Mat行列上に描画する
+ * brightnessは、0から255で指定。（デフォルト値は255）
+ */
+void GraphUtil::drawRoadSegmentOnMat(RoadGraph& roads, RoadEdgeDesc e, cv::Mat& mat, int width, int brightness) {
+	for (int i = 0; i < roads.graph[e]->polyLine.size() - 1; i++) {
+		QVector2D p0 = roads.graph[e]->polyLine[i];
+		QVector2D p1 = roads.graph[e]->polyLine[i + 1];
+		cv::line(mat, cv::Point(p0.x(), p0.y()), cv::Point(p1.x(), p1.y()), cv::Scalar(brightness), width, CV_AA);
+	}
 }

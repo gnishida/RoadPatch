@@ -29,7 +29,7 @@ void BFSForest::buildForest(int maxDepth) {
 		RoadVertexDesc tgt = roots[i * 2 + 1];
 
 		// Get the edge
-		RoadEdgeDesc e_desc = GraphUtil::getEdge(roads, src, tgt);
+		RoadEdgeDesc e_desc = GraphUtil::getEdge(*roads, src, tgt);
 
 		// Set the group and the seed flag for the edge
 		roads->graph[e_desc]->group = i;
@@ -46,7 +46,7 @@ void BFSForest::buildForest(int maxDepth) {
 			roads->graph[e_desc]->valid = false;
 
 			// add a new edge
-			e_desc = GraphUtil::addEdge(roads, new_src, tgt, roads->graph[e_desc]);
+			e_desc = GraphUtil::addEdge(*roads, new_src, tgt, roads->graph[e_desc]);
 
 			src = new_src;
 		}
@@ -62,7 +62,7 @@ void BFSForest::buildForest(int maxDepth) {
 			roads->graph[e_desc]->valid = false;
 
 			// add a new edge
-			e_desc = GraphUtil::addEdge(roads, src, new_tgt, roads->graph[e_desc]);
+			e_desc = GraphUtil::addEdge(*roads, src, new_tgt, roads->graph[e_desc]);
 
 			tgt = new_tgt;
 		}
@@ -122,17 +122,17 @@ void BFSForest::buildForest(int maxDepth) {
 			RoadVertexDesc child = nodes[i];
 
 			if (visitedVertex.contains(child)) { // if it is already visited
-				RoadEdgeDesc orig_e_desc = GraphUtil::getEdge(roads, parent, child);
+				RoadEdgeDesc orig_e_desc = GraphUtil::getEdge(*roads, parent, child);
 
 				// invalidate the original edge
 				roads->graph[orig_e_desc]->valid = false;
 
 				// if the node is already visited, copy it and add it as a child.
-				RoadVertexDesc child2 = GraphUtil::addVertex(roads, roads->graph[child]);
+				RoadVertexDesc child2 = GraphUtil::addVertex(*roads, roads->graph[child]);
 				roads->graph[child2]->virt = false;
 
 				// create a new edge
-				RoadEdgeDesc e_desc = GraphUtil::addEdge(roads, parent, child2, roads->graph[orig_e_desc]);
+				RoadEdgeDesc e_desc = GraphUtil::addEdge(*roads, parent, child2, roads->graph[orig_e_desc]);
 
 				roads->graph[e_desc]->group = group;
 
