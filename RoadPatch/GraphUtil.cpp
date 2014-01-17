@@ -564,23 +564,28 @@ void GraphUtil::orderPolyLine(RoadGraph* roads, RoadEdgeDesc e, RoadVertexDesc s
 
 /**
  * Move the edge to the specified location.
+ * src_posは、エッジeのsource頂点の移動先
+ * tgt_posは、エッジeのtarget頂点の移動先
  */
 void GraphUtil::moveEdge(RoadGraph& roads, RoadEdgeDesc e, QVector2D& src_pos, QVector2D& tgt_pos) {
 	RoadVertexDesc src = boost::source(e, roads.graph);
 	RoadVertexDesc tgt = boost::target(e, roads.graph);
 
-	QVector2D src_diff = src_pos - roads.graph[src]->pt;
-	QVector2D tgt_diff = tgt_pos - roads.graph[tgt]->pt;
+	int n = roads.graph[e]->polyLine.size();
 
 	if ((roads.graph[e]->polyLine[0] - roads.graph[src]->pt).lengthSquared() < (roads.graph[e]->polyLine[0] - roads.graph[tgt]->pt).lengthSquared()) {
-		int n = roads.graph[e]->polyLine.size();
+		QVector2D src_diff = src_pos - roads.graph[e]->polyLine[0];
+		QVector2D tgt_diff = tgt_pos - roads.graph[e]->polyLine[n - 1];
+
 		for (int i = 1; i < n - 1; i++) {
 			roads.graph[e]->polyLine[i] += src_diff + (tgt_diff - src_diff) * (float)i / (float)(n - 1);
 		}
 		roads.graph[e]->polyLine[0] = src_pos;
 		roads.graph[e]->polyLine[n - 1] = tgt_pos;
 	} else {
-		int n = roads.graph[e]->polyLine.size();
+		QVector2D src_diff = src_pos - roads.graph[e]->polyLine[n - 1];
+		QVector2D tgt_diff = tgt_pos - roads.graph[e]->polyLine[0];
+
 		for (int i = 1; i < n - 1; i++) {
 			roads.graph[e]->polyLine[i] += tgt_diff + (src_diff - tgt_diff) * (float)i / (float)(n - 1);
 		}
