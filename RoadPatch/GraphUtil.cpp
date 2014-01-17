@@ -927,17 +927,17 @@ void GraphUtil::realize(RoadGraph& roads) {
 /**
  * Make the edge finer by inserting more points along the polyline.
  */
-std::vector<QVector2D> GraphUtil::finerEdge(RoadGraph* roads, RoadEdgeDesc e, float step) {
+std::vector<QVector2D> GraphUtil::finerEdge(RoadGraph& roads, RoadEdgeDesc e, float step) {
 	std::vector<QVector2D> polyLine;
 
-	for (int i = 0; i < roads->graph[e]->polyLine.size() - 1; i++) {
-		QVector2D vec = roads->graph[e]->polyLine[i + 1] - roads->graph[e]->polyLine[i];
+	for (int i = 0; i < roads.graph[e]->polyLine.size() - 1; i++) {
+		QVector2D vec = roads.graph[e]->polyLine[i + 1] - roads.graph[e]->polyLine[i];
 		float length = vec.length();
 		for (int j = 0; j < length; j += step) {
-			polyLine.push_back(roads->graph[e]->polyLine[i] + vec * (float)j / length);
+			polyLine.push_back(roads.graph[e]->polyLine[i] + vec * (float)j / length);
 		}
 	}
-	polyLine.push_back(roads->graph[e]->polyLine[roads->graph[e]->polyLine.size() - 1]);
+	polyLine.push_back(roads.graph[e]->polyLine[roads.graph[e]->polyLine.size() - 1]);
 
 	return polyLine;
 }
@@ -1528,7 +1528,7 @@ void GraphUtil::extractRoads2(RoadGraph& roads, const AbstractArea& area, int ro
 		RoadVertexDesc tgt = boost::target(edges[e_id], roads.graph);
 
 		// if either vertice is out of the range, add a vertex on the border
-		std::vector<QVector2D> polyLine = finerEdge(&roads, edges[e_id]);
+		std::vector<QVector2D> polyLine = finerEdge(roads, edges[e_id]);
 		QVector2D intPt;
 		if (area.contains(polyLine[0])) {
 			for (int i = 1; i < polyLine.size(); i++) {
@@ -1619,7 +1619,7 @@ void GraphUtil::subtractRoads2(RoadGraph& roads, const AbstractArea& area) {
 		RoadVertexDesc tgt = boost::target(edges[e_id], roads.graph);
 
 		// if either vertice is out of the range, add a vertex on the border
-		std::vector<QVector2D> polyLine = finerEdge(&roads, edges[e_id], 3.0f);
+		std::vector<QVector2D> polyLine = finerEdge(roads, edges[e_id], 3.0f);
 		QVector2D intPt;
 		if (area.contains(polyLine[0])) {
 			for (int i = 1; i < polyLine.size(); i++) {

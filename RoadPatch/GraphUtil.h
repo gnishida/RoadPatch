@@ -76,7 +76,7 @@ public:
 	static bool isIntersect(RoadGraph* roads, std::vector<QVector2D>& polyLine1, std::vector<QVector2D>& polyLine2);
 	static std::vector<QVector2D> simplifyPolyLine(std::vector<QVector2D>& polyLine, float threshold);
 	static void removeShortEdges(RoadGraph& roads, float threshold);
-	static std::vector<QVector2D> finerEdge(RoadGraph* roads, RoadEdgeDesc e, float step = 1.0f);
+	static std::vector<QVector2D> finerEdge(RoadGraph& roads, RoadEdgeDesc e, float step = 1.0f);
 
 	// File I/O
 	static void loadRoads(RoadGraph& roads, const QString& filename, int roadType = 7);
