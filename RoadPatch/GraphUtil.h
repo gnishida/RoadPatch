@@ -175,6 +175,6 @@ public:
 	static void printStatistics(RoadGraph* roads);
 
 	// OpenCV
-	static void convertToMat(RoadGraph& roads, cv::Mat_<uchar>& mat, const cv::Size& size, const QVector2D& offset = QVector2D(0, 0));
+	static void convertToMat(RoadGraph& roads, cv::Mat_<uchar>& mat, const cv::Size& size, bool flip = true);
 };
 
