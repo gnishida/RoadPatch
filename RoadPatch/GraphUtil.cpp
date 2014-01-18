@@ -3715,13 +3715,15 @@ cv::MatND GraphUtil::computeEdgeLengthHistogram(RoadGraph& roads, int size) {
 	}
 
 	// create a histogram
-	float range[] = { 0, 1000 };
+	float range[] = { 0, 500 };
 	const float* ranges = { range };
 	cv::MatND hist;
 	cv::calcHist(&lengthMat, 1, 0, cv::Mat(), hist, 1, &size, &ranges, true, false);
 
 	// normalize the histogram
-	cv::normalize(hist, hist, 0, 1, cv::NORM_MINMAX, -1, cv::Mat());
+	if (count > 0) {
+		hist /= count;
+	}
 
 	return hist;
 }
@@ -3732,7 +3734,7 @@ cv::MatND GraphUtil::computeEdgeLengthHistogram(RoadGraph& roads, int size) {
 cv::MatND GraphUtil::computeEdgeCurvatureHistogram(RoadGraph& roads, int size) {
 	cv::Mat curvatureMat = cv::Mat::zeros(1, getNumEdges(roads), CV_32FC1);
 	
-	// build a matrix that contains the length of each edge
+	// build a matrix that contains the curvature of each edge
 	int count = 0;
 	RoadEdgeIter ei, eend;
 	for (boost::tie(ei, eend) = boost::edges(roads.graph); ei != eend; ++ei) {
@@ -3757,7 +3759,9 @@ cv::MatND GraphUtil::computeEdgeCurvatureHistogram(RoadGraph& roads, int size) {
 	cv::calcHist(&curvatureMat, 1, 0, cv::Mat(), hist, 1, &size, &ranges, true, false);
 
 	// normalize the histogram
-	cv::normalize(hist, hist, 0, 1, cv::NORM_MINMAX, -1, cv::Mat());
+	if (count > 0) {
+		hist /= count;
+	}
 
 	return hist;
 }
