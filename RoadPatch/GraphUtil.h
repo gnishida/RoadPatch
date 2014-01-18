@@ -106,7 +106,9 @@ public:
 	static void reduce(RoadGraph& roads);
 	static bool reduce(RoadGraph& roads, RoadVertexDesc desc);
 	static void simplify(RoadGraph& roads, float dist_threshold);
+	static void simplify2(RoadGraph& srcRoad, float dist_threshold);
 	static void normalize(RoadGraph& roads);
+	static void normalize(RoadGraph& roads, float step_size);
 	static void singlify(RoadGraph& roads);
 	static void planarify(RoadGraph& roads);
 	static bool planarifyOne(RoadGraph& roads);

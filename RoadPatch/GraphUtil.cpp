@@ -1868,7 +1868,7 @@ bool GraphUtil::reduce(RoadGraph& roads, RoadVertexDesc desc) {
 	//if (edges[0]->lanes != edges[1]->lanes) return false;
 
 	// If the vertices form a triangle, don't remove it.
-	if (hasEdge(roads, vd[0], vd[1])) return false;
+	//if (hasEdge(roads, vd[0], vd[1])) return false;
 
 	RoadEdgePtr new_edge = RoadEdgePtr(new RoadEdge(edges[0]->type, edges[0]->lanes, edges[0]->oneWay));
 	orderPolyLine(roads, ed[0], vd[0]);
@@ -1953,6 +1953,85 @@ void GraphUtil::simplify(RoadGraph& roads, float dist_threshold) {
 }
 
 /**
+ * ノード間の距離が指定した距離よりも近い場合は、１つにしてしまう。
+ * ノードとエッジ間の距離が、閾値よりも小さい場合も、エッジ上にノードを移してしまう。
+ */
+void GraphUtil::simplify2(RoadGraph& roads, float dist_threshold) {
+	float threshold2 = dist_threshold * dist_threshold;
+
+	RoadGraph temp;
+	copyRoads(roads, temp);
+
+	roads.clear();
+
+	// 全ての頂点同士で、近いものをグループ化する
+	int group_id = 0;
+	std::vector<QVector2D> group_centers;
+	std::vector<int> group_nums;
+	QHash<RoadVertexDesc, int> groups;
+	RoadVertexIter vi, vend;
+	for (boost::tie(vi, vend) = boost::vertices(temp.graph); vi != vend; ++vi) {
+		if (!temp.graph[*vi]->valid) continue;
+
+		float min_dist = std::numeric_limits<float>::max();
+		int min_group_id = -1;
+		for (int i = 0; i < group_centers.size(); i++) {
+			float dist = (group_centers[i] - temp.graph[*vi]->pt).lengthSquared();
+			if (dist < min_dist) {
+				min_dist = dist;
+				min_group_id = i;
+			}
+		}
+
+		if (min_group_id >= 0 && min_dist < threshold2) {
+			group_centers[min_group_id] = group_centers[min_group_id] * group_nums[min_group_id] + temp.graph[*vi]->pt;
+			group_nums[min_group_id]++;
+			group_centers[min_group_id] /= group_nums[min_group_id];
+		} else {
+			min_group_id = group_centers.size();
+			group_centers.push_back(temp.graph[*vi]->pt);
+			group_nums.push_back(1);
+		}
+		
+		groups[*vi] = min_group_id;
+	}
+
+	// エッジを登録する
+	QHash<int, RoadVertexDesc> conv;	// group center ⇒ 実際の頂点desc
+	RoadGraph temp2;
+	for (int i = 0; i < group_centers.size(); i++) {
+		RoadVertexDesc v = boost::add_vertex(temp2.graph);
+		temp2.graph[v] = RoadVertexPtr(new RoadVertex(group_centers[i]));
+		conv[i] = v;
+	}
+
+	RoadEdgeIter ei, eend;
+	for (boost::tie(ei, eend) = boost::edges(temp.graph); ei != eend; ++ei) {
+		if (!temp.graph[*ei]->valid) continue;
+
+		RoadVertexDesc src = boost::source(*ei, temp.graph);
+		RoadVertexDesc tgt = boost::target(*ei, temp.graph);
+
+		RoadVertexDesc new_src = conv[groups[src]];
+		RoadVertexDesc new_tgt = conv[groups[tgt]];
+
+		// エッジが点に縮退する場合は、スキップ
+		if (new_src == new_tgt) continue;
+
+		// 既にエッジがあれば、スキップ
+		if (hasEdge(temp2, new_src, new_tgt)) continue;
+
+		// エッジを追加
+		RoadEdgeDesc e = addEdge(temp2, new_src, new_tgt, temp.graph[*ei]);
+		moveEdge(temp2, e, temp2.graph[new_src]->pt, temp2.graph[new_tgt]->pt);
+	}
+
+	copyRoads(temp2, roads);
+
+	roads.setModified();
+}
+
+/**
  * エッジのポリゴンが3つ以上で構成されている場合、中間点を全てノードとして登録する。
  */
 void GraphUtil::normalize(RoadGraph& roads) {
@@ -1991,6 +2070,52 @@ void GraphUtil::normalize(RoadGraph& roads) {
 
 		// Add the last edge
 		addEdge(roads, prev_desc, last_desc, roads.graph[*ei]->type, roads.graph[*ei]->lanes, roads.graph[*ei]->oneWay);
+	}
+}
+
+/**
+ * エッジを指定されたstep_sizeで分割し、それぞれの点を全て頂点として登録する。
+ */
+void GraphUtil::normalize(RoadGraph& roads, float step_size) {
+	RoadGraph temp;
+	copyRoads(roads, temp);
+
+	RoadEdgeIter ei, eend;
+	for (boost::tie(ei, eend) = boost::edges(roads.graph); ei != eend; ++ei) {
+		roads.graph[*ei]->valid = false;
+	}
+	
+	for (boost::tie(ei, eend) = boost::edges(temp.graph); ei != eend; ++ei) {
+		if (!temp.graph[*ei]->valid) continue;
+
+		RoadVertexDesc src = boost::source(*ei, temp.graph);
+		RoadVertexDesc tgt = boost::target(*ei, temp.graph);
+
+		std::vector<QVector2D> line = finerEdge(temp, *ei, step_size);
+
+		RoadVertexDesc prev_desc;
+		RoadVertexDesc last_desc;
+		if ((temp.graph[src]->pt - line[0]).lengthSquared() < (temp.graph[tgt]->pt - line[0]).lengthSquared()) {
+			prev_desc = src;
+			last_desc = tgt;
+		} else {
+			prev_desc = tgt;
+			last_desc = src;
+		}
+
+		for (int i = 1; i < line.size() - 1; i++) {
+			// add all the points along the poly line as vertices
+			RoadVertexDesc new_v_desc = boost::add_vertex(roads.graph);
+			roads.graph[new_v_desc] = RoadVertexPtr(new RoadVertex(line[i]));
+
+			// Add an edge
+			addEdge(roads, prev_desc, new_v_desc, temp.graph[*ei]->type, temp.graph[*ei]->lanes, temp.graph[*ei]->oneWay);
+
+			prev_desc = new_v_desc;
+		}
+
+		// Add the last edge
+		addEdge(roads, prev_desc, last_desc, temp.graph[*ei]->type, temp.graph[*ei]->lanes, temp.graph[*ei]->oneWay);
 	}
 }
 
