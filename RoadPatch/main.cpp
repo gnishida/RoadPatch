@@ -1,64 +1,79 @@
 ﻿/**
- * このプログラムは、Binary Coherent Edge Descriptorsの論文を参考に、
- * 当該論文の内容を実装したものです。
+ * 道路網をパッチに分割し、画像、GSMファイル、特徴量ファイルとして保存する。
  *
  * @author Gen Nishida
  * @version 1.0
  */
 
 #include <iostream>
-#include <opencv2/opencv.hpp>
-#include <QVector2D>
-#include <QHash>
+#include <opencv/cv.h>
+#include <opencv/highgui.h>
+#include "Polygon2D.h"
 #include "GraphUtil.h"
-#include "BBox.h"
-#include "KMeans.h"
+#include "RoadSegmentationUtil.h"
 
 int main(int argc, char *argv[]) {
-	int patch_size = 60;
+	if (argc < 4) {
+		std::cerr << "Usage: RoadPatch <road GSM file> <original size> <patch size>" << std::endl;
+		return 1;
+	}
 	
-	// Load the road graph (except highways) from GSM file.
+	QString filename = argv[1];
+	int originalSize = atoi(argv[2]);
+	int patchSize = atoi(argv[3]);
+
+	// ファイル名のベースパートを取得
+	QString basename = filename.split("\\").last().split(".").at(0);
+
+	// 道路網をGSMファイルから読み込む
 	RoadGraph r;
-	//GraphUtil::loadRoads(r, "osm/3x3_simplified/london_3.gsm");
-	GraphUtil::loadRoads(r, "osm/1x1/canberra.gsm");
+	GraphUtil::loadRoads(r, filename);
 
-	// K-Means
-	KMeans km;
-	
-	// Divide the road graph into 250x250 patches
+	// 指定されたセルサイズに分割する
 	int count = 0;
-	for (int y = -500; y < 500; y += 250) {
-		for (int x = -500; x < 500; x += 250) {
+	for (int y = -originalSize / 2; y <= originalSize / 2 - patchSize; y += patchSize / 2) {
+		for (int x = -originalSize / 2; x <= originalSize / 2 - patchSize * 0.5; x += patchSize / 2) {
+			Polygon2D area = Polygon2D::createRectangle(QVector2D(x, y), QVector2D(x + patchSize, y + patchSize));
+
+			// パッチの範囲の道路網を抽出
 			RoadGraph patch;
-			GraphUtil::copyRoads(r, patch);
+			GraphUtil::copyRoads(r, patch, area);
 
-			BBox box(QVector2D(x, y));
-			box.addPoint(QVector2D(x + 250, y + 250));
-			GraphUtil::extractRoads(patch, box, false);
+			// 道路網が、直交座標系の第一象限に位置するよう、移動する
+			QVector2D offset(-x, -y);
+			GraphUtil::translate(patch, offset);
 
-			// extract some features from the patch
-			cv::MatND histLength = GraphUtil::computeEdgeLengthHistogram(patch, 10);
-			cv::MatND histCurvature = GraphUtil::computeEdgeCurvatureHistogram(patch, 10);
+			// cv::Matを作成
+			cv::Mat_<uchar> mat(patchSize, patchSize);
+			GraphUtil::convertToMat(patch, mat, mat.size());
 
-			int c = histLength.depth();
-			printf("%d\n", c);
+			// 1/5に縮小
+			cv::resize(mat, mat, cv::Size(), 0.2, 0.2, cv::INTER_CUBIC);
 
-			float hoge = compareHist(histLength, histCurvature, 1);
+			// 画像として保存
+			cv::imwrite((basename + "_%1.jpg").arg(count).toUtf8().data(), mat);
 
-			km.add(histLength, histCurvature, x, y);
+			// GSMファイルとして保存
+			GraphUtil::saveRoads(patch, (basename + "_%1.gsm").arg(count));
+
+			// 特徴量を取得
+			std::vector<GridFeature> gridFeatures;
+			RoadSegmentationUtil::detectGrid(patch, area, 2, gridFeatures, 10, 9, 3000, 0.5, 0.1, 0.7, 20, 300);
+			if (gridFeatures.size() > 0) {
+				gridFeatures[0].save((basename + "_%1_grid_feature.xml").arg(count));
+			}
+			std::vector<RadialFeature> radialFeatures;
+			RoadSegmentationUtil::detectRadial(patch, area, 3, radialFeatures, 2, 0.05, 0.1, 150, 80, 0.4, 0.2, 0.7, 20, 300);
+			if (radialFeatures.size() > 0) {
+				radialFeatures[0].save((basename + "_%1_radial_feature.xml").arg(count));
+			}
+			std::vector<GenericFeature> genericFeatures;
+			RoadSegmentationUtil::extractGenericFeature(patch, area, genericFeatures);
+			if (genericFeatures.size() > 0) {
+				genericFeatures[0].save((basename + "_%1_generic_feature.xml").arg(count));
+			}
 
 			count++;
 		}
 	}
-
-	// Convert the road graph to a matrix
-	km.cluster();
-	cv::Mat_<uchar> result = km.getSegmentation();
-
-	// Display
-	cv::flip(result, result, 1);
-	cv::namedWindow("segmentation", CV_WINDOW_AUTOSIZE|CV_WINDOW_FREERATIO);
-	cv::imshow("segmentation", result * 64);
-
-	cv::waitKey(0);
 }

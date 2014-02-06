@@ -82,6 +82,7 @@ public:
 
 	// The entire graph related functions
 	static void copyRoads(RoadGraph& srcRoads, RoadGraph& dstRoads);
+	static void copyRoads(RoadGraph& srcRoads, RoadGraph& dstRoads, const BBox& area);
 	static void mergeRoads(RoadGraph& roads1, RoadGraph& roads2);
 	static void connectRoads(RoadGraph& roads1, RoadGraph& roads2, float connect_threshold);
 	static BBox getAABoundingBox(RoadGraph& roads);

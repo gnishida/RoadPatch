@@ -1147,6 +1147,42 @@ void GraphUtil::copyRoads(RoadGraph& srcRoads, RoadGraph& dstRoads) {
 	dstRoads.setModified();
 }
 
+void GraphUtil::copyRoads(RoadGraph& srcRoads, RoadGraph& dstRoads, const BBox& area) {
+	dstRoads.clear();
+
+	QMap<RoadVertexDesc, RoadVertexDesc> conv;
+	RoadVertexIter vi, vend;
+	for (boost::tie(vi, vend) = boost::vertices(srcRoads.graph); vi != vend; ++vi) {
+		if (!area.contains(srcRoads.graph[*vi]->pt)) continue;
+
+		// Add a vertex
+		RoadVertexPtr new_v = RoadVertexPtr(new RoadVertex(srcRoads.graph[*vi]->pt));
+		new_v->valid = srcRoads.graph[*vi]->valid;
+		RoadVertexDesc new_v_desc = boost::add_vertex(dstRoads.graph);
+		dstRoads.graph[new_v_desc] = new_v;
+
+		conv[*vi] = new_v_desc;
+	}
+
+	RoadEdgeIter ei, eend;
+	for (boost::tie(ei, eend) = boost::edges(srcRoads.graph); ei != eend; ++ei) {
+		RoadVertexDesc src = boost::source(*ei, srcRoads.graph);
+		RoadVertexDesc tgt = boost::target(*ei, srcRoads.graph);
+
+		if (!conv.contains(src) || !conv.contains(tgt)) continue;
+
+		RoadVertexDesc new_src = conv[src];
+		RoadVertexDesc new_tgt = conv[tgt];
+
+		// Add an edge
+		RoadEdgePtr new_e = RoadEdgePtr(new RoadEdge(*srcRoads.graph[*ei]));
+		std::pair<RoadEdgeDesc, bool> edge_pair = boost::add_edge(new_src, new_tgt, dstRoads.graph);
+		dstRoads.graph[edge_pair.first] = new_e;
+	}
+
+	dstRoads.setModified();
+}
+
 /**
  * Merge the 2nd road to the 1st road. As a result, the roads1 will be updated containing all the vertices and edges of roads2.
  */

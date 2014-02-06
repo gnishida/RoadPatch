@@ -125,13 +125,18 @@
     <ClCompile Include="BBox.cpp" />
     <ClCompile Include="BFSForest.cpp" />
     <ClCompile Include="BFSTree.cpp" />
+    <ClCompile Include="GenericFeature.cpp" />
     <ClCompile Include="GraphUtil.cpp" />
+    <ClCompile Include="GridFeature.cpp" />
     <ClCompile Include="KMeans.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Polygon2D.cpp" />
+    <ClCompile Include="RadialFeature.cpp" />
     <ClCompile Include="Renderable.cpp" />
     <ClCompile Include="RoadEdge.cpp" />
     <ClCompile Include="RoadGraph.cpp" />
     <ClCompile Include="RoadGraphRenderer.cpp" />
+    <ClCompile Include="RoadSegmentationUtil.cpp" />
     <ClCompile Include="RoadVertex.cpp" />
     <ClCompile Include="Util.cpp" />
   </ItemGroup>
@@ -142,12 +147,17 @@
     <ClInclude Include="BBox.h" />
     <ClInclude Include="BFSForest.h" />
     <ClInclude Include="BFSTree.h" />
+    <ClInclude Include="GenericFeature.h" />
     <ClInclude Include="GraphUtil.h" />
+    <ClInclude Include="GridFeature.h" />
     <ClInclude Include="KMeans.h" />
+    <ClInclude Include="Polygon2D.h" />
+    <ClInclude Include="RadialFeature.h" />
     <ClInclude Include="Renderable.h" />
     <ClInclude Include="RoadEdge.h" />
     <ClInclude Include="RoadGraph.h" />
     <ClInclude Include="RoadGraphRenderer.h" />
+    <ClInclude Include="RoadSegmentationUtil.h" />
     <ClInclude Include="RoadVertex.h" />
     <ClInclude Include="Util.h" />
   </ItemGroup>
