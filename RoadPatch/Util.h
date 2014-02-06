@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <QVector3D>
 #include <QVector2D>
@@ -17,5 +17,14 @@ public:
 	static bool segmentSegmentIntersectXY(const QVector2D& a, const QVector2D& b, const QVector2D& c, const QVector2D& d, float *tab, float *tcd, bool segmentOnly, QVector2D &intPoint);
 	static float pointSegmentDistanceXY(const QVector2D& a, const QVector2D& b, const QVector2D& c, QVector2D& closestPtInAB);
 
+	// 角度関係
+	static float rad2deg(float rad);
+	static float normalizeAngle(float angle);
+	static float diffAngle(const QVector2D& dir1, const QVector2D& dir2, bool absolute = true);
+	static float diffAngle(float angle1, float angle2, bool absolute = true);
+
+	// 乱数関係
+	static float uniform_rand();
+	static float uniform_rand(float a, float b);
 };
 

@@ -75,6 +75,12 @@
     <ClCompile Include="Polygon2D.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ConvexHull.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="HoughTransform.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AbstractArea.h">
@@ -132,6 +138,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Polygon2D.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ConvexHull.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="HoughTransform.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

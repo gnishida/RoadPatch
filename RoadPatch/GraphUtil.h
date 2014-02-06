@@ -4,6 +4,7 @@
 #include "BBox.h"
 #include "AbstractForest.h"
 #include "ArcArea.h"
+#include "Polygon2D.h"
 #include <vector>
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
@@ -56,6 +57,7 @@ public:
 	static RoadEdgeDesc getEdge(RoadGraph& roads, int index, bool onlyValidEdge = true);
 	static float getTotalEdgeLength(RoadGraph& roads, RoadVertexDesc v);
 	static int getNumEdges(RoadGraph& roads, bool onlyValidEdge = true);
+	static int getNumEdges(RoadGraph& roads, RoadVertexDesc v, int roadType, bool onlyValidEdge = true);
 	static RoadEdgeDesc addEdge(RoadGraph& roads, RoadVertexDesc src, RoadVertexDesc tgt, unsigned int type, unsigned int lanes, bool oneWay = false);
 	static RoadEdgeDesc addEdge(RoadGraph& roads, RoadVertexDesc src, RoadVertexDesc tgt, RoadEdgePtr ref_edge);
 	static bool hasEdge(RoadGraph& roads, RoadVertexDesc desc1, RoadVertexDesc desc2, bool onlyValidEdge = true);
@@ -82,7 +84,7 @@ public:
 
 	// The entire graph related functions
 	static void copyRoads(RoadGraph& srcRoads, RoadGraph& dstRoads);
-	static void copyRoads(RoadGraph& srcRoads, RoadGraph& dstRoads, const BBox& area);
+	static void copyRoads(RoadGraph& srcRoads, RoadGraph& dstRoads, Polygon2D& area, bool strict = true);
 	static void mergeRoads(RoadGraph& roads1, RoadGraph& roads2);
 	static void connectRoads(RoadGraph& roads1, RoadGraph& roads2, float connect_threshold);
 	static BBox getAABoundingBox(RoadGraph& roads);
@@ -130,9 +132,7 @@ public:
 
 	// Others
 	static float computeMinDiffAngle(std::vector<float> *data1, std::vector<float> *data2);
-	static float normalizeAngle(float angle);
-	static float diffAngle(const QVector2D& dir1, const QVector2D& dir2, bool absolute = true);
-	static float diffAngle(float angle1, float angle2, bool absolute = true);
+	static bool isRoadTypeMatched(int type, int ref_type);
 
 	// Compute similarity
 	//static float computeDissimilarity(RoadGraph* roads1, QMap<RoadVertexDesc, RoadVertexDesc>& map1, RoadGraph* roads2, QMap<RoadVertexDesc, RoadVertexDesc>& map2, float w_connectivity, float w_split, float w_angle, float w_distance);

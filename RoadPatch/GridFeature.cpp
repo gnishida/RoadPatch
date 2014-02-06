@@ -2,6 +2,7 @@
 #include "Util.h"
 #include <QFile>
 #include <QDomDocument>
+#include <QTextStream>
 #include <random>
 
 #ifndef M_PI

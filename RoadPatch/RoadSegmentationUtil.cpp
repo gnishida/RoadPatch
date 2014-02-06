@@ -5,15 +5,10 @@
 #include "ConvexHull.h"
 #include "HoughTransform.h"
 #include <math.h>
-
-#ifndef Q_MOC_RUN
 #include <boost/graph/planar_face_traversal.hpp>
 #include <boost/graph/boyer_myrvold_planar_test.hpp>
-#endif
 
-#ifndef SQR(x)
 #define SQR(x)	((x) * (x))
-#endif
 
 RoadGraph* roadGraphPtr;
 std::vector<RoadEdgeDesc> plaza;
@@ -626,7 +621,7 @@ bool RoadSegmentationUtil::detectCircle(RoadGraph& roads, const Polygon2D& area,
 		if (duplicated) continue;
 
 		if ((center - QVector2D(250, 250)).lengthSquared() < detectCircleThreshold2) {
-			std::cout << "Circle detected: (" << center.x() << "," << center.y() << ") R: " << r << std::endl;
+			std::cout << "Circle detected (" << rf.group_id << ") : C: (" << center.x() << "," << center.y() << ") R: " << r << std::endl;
 			rf.center += center - QVector2D(250, 250);
 			rf.radii.push_back(r);
 		}

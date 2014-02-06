@@ -32,12 +32,12 @@ int main(int argc, char *argv[]) {
 	// 指定されたセルサイズに分割する
 	int count = 0;
 	for (int y = -originalSize / 2; y <= originalSize / 2 - patchSize; y += patchSize / 2) {
-		for (int x = -originalSize / 2; x <= originalSize / 2 - patchSize * 0.5; x += patchSize / 2) {
+		for (int x = -originalSize / 2; x <= originalSize / 2 - patchSize; x += patchSize / 2) {
 			Polygon2D area = Polygon2D::createRectangle(QVector2D(x, y), QVector2D(x + patchSize, y + patchSize));
 
 			// パッチの範囲の道路網を抽出
 			RoadGraph patch;
-			GraphUtil::copyRoads(r, patch, area);
+			GraphUtil::copyRoads(r, patch, area, false);
 
 			// 道路網が、直交座標系の第一象限に位置するよう、移動する
 			QVector2D offset(-x, -y);
@@ -57,15 +57,15 @@ int main(int argc, char *argv[]) {
 			GraphUtil::saveRoads(patch, (basename + "_%1.gsm").arg(count));
 
 			// 特徴量を取得
+			std::vector<RadialFeature> radialFeatures;
+			RoadSegmentationUtil::detectRadial(patch, area, 3, radialFeatures, 2, 0.05, 0.1, 80, 0.4, 0.2, 80, 0.2, 150, 0.7, 80, 6, 0.1);
+			if (radialFeatures.size() > 0) {
+				radialFeatures[0].save((basename + "_%1_radial_feature.xml").arg(count));
+			}
 			std::vector<GridFeature> gridFeatures;
 			RoadSegmentationUtil::detectGrid(patch, area, 2, gridFeatures, 10, 9, 3000, 0.5, 0.1, 0.7, 20, 300);
 			if (gridFeatures.size() > 0) {
 				gridFeatures[0].save((basename + "_%1_grid_feature.xml").arg(count));
-			}
-			std::vector<RadialFeature> radialFeatures;
-			RoadSegmentationUtil::detectRadial(patch, area, 3, radialFeatures, 2, 0.05, 0.1, 150, 80, 0.4, 0.2, 0.7, 20, 300);
-			if (radialFeatures.size() > 0) {
-				radialFeatures[0].save((basename + "_%1_radial_feature.xml").arg(count));
 			}
 			std::vector<GenericFeature> genericFeatures;
 			RoadSegmentationUtil::extractGenericFeature(patch, area, genericFeatures);

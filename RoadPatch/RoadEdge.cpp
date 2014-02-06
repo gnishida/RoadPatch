@@ -8,8 +8,9 @@ RoadEdge::RoadEdge(unsigned int type, unsigned int lanes, bool oneWay) {
 
 	// initialize other members
 	this->valid = true;
-	this->importance = 0.0f;
-	this->group = 0;
+	this->shapeType = SHAPE_DEFAULT;
+	this->group = -1;
+	this->gridness = 0.0f;
 	this->seed = false;
 	this->fullyPaired = false;
 }
